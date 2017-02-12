@@ -17,12 +17,13 @@ class AreaCoverage:
     """ In this, we attempt to place N UAVs and M boats in NxN area in such a way
     that the coverage area is maximized by minimizing the overlap """
     
-    def __init__(self, N, UAVNumber, UAVRadius, boatNumber, boatRadius):
+    def __init__(self, N, UAVNumber, UAVRadius, boatNumber, boatRadius, numTestStates):
+        self.size = N
         self.UAVnumber=UAVNumber
         self.UAVRadius=UAVRadius
         self.boatNumber=boatNumber
         self.boatRadius=boatRadius
-        self.size = N
+        self.numTestStates=numTestStates
         self.valDomainUAV = [UAVRadius, N-UAVRadius]  #The Value domain from which variables can take value
         self.valDomainBoat=[boatRadius, N-boatRadius]
         self.board = [0, N]     #We are only making one dimensional array as opposed to matrix and enforcing different row constraint here itself
@@ -33,9 +34,9 @@ class AreaCoverage:
         """We have done random assignments, (somewhat greedily). However, a greedy assignments may be used to improve performance"""
         #Forcing Column Constraint randomly
         for i in range(self.UAVnumber):
-            self.ObjList[str(i)+'u']=(random.uniform(self.valDomainUAV[0], self.valDomainUAV[1]), random.uniform(self.valDomainUAV[0], self.valDomainUAV[1]),self.UAVRadius)
+            self.ObjList[str(i)+'u']=(random.uniform(self.valDomainUAV[0], self.valDomainUAV[1]), random.uniform(self.valDomainUAV[0], self.valDomainUAV[1]),self.UAVRadius,0)
         for j in range(self.boatNumber):
-            self.ObjList[str(j)+'b']=(random.uniform(self.valDomainBoat[0], self.valDomainBoat[1]), random.uniform(self.valDomainBoat[0], self.valDomainBoat[1]), self.boatRadius)
+            self.ObjList[str(j)+'b']=(random.uniform(self.valDomainBoat[0], self.valDomainBoat[1]), random.uniform(self.valDomainBoat[0], self.valDomainBoat[1]), self.boatRadius,0)
         return self.ObjList
 
 
@@ -71,15 +72,27 @@ class AreaCoverage:
         """ select random position for the var 30 times, and check the position of minimum overlap.
             Returns the new state with the modified new position for var"""
         currentVar = state[var]
+        localMinCount = currentVar[3]
         
+        # if caught in local minimum, jump somewhere else
+        if (localMinCount > 2):
+            print "jump"
+            if(var[1:]=='u'):
+                state[var] = (random.uniform(self.valDomainUAV[0], self.valDomainUAV[1]), random.uniform(self.valDomainUAV[0], self.valDomainUAV[1]),self.UAVRadius,0)
+            else:    
+                state[var] = (random.uniform(self.valDomainBoat[0], self.valDomainBoat[1]), random.uniform(self.valDomainBoat[0], self.valDomainBoat[1]), self.boatRadius,0)
+            localMinCount = 0
+            
         minx = currentVar[0]
         miny = currentVar[1]
         minconflict = self.getTotalOverLap(state, var)
         
+        origconflict = minconflict
+        
         currx = minx
         curry = miny
         currConflict = minconflict
-        
+                
         for i in range(30):
             # Get new position
             if(var[1:]=='u'):
@@ -89,7 +102,7 @@ class AreaCoverage:
                 curry = random.uniform(
                     max( (curry - currConflict * random.randrange(1, 4)), self.valDomainUAV[0] ),
                     min( (curry + currConflict * random.randrange(1, 4)), self.valDomainUAV[1] ) )
-                state[var] = (currx, curry, self.UAVRadius)
+                state[var] = (currx, curry, self.UAVRadius, 0)
             else:
                 currx = random.uniform(
                     max( (currx - currConflict * random.randrange(1, 4)), self.valDomainBoat[0] ),
@@ -97,21 +110,23 @@ class AreaCoverage:
                 curry = random.uniform(
                     max( (curry - currConflict * random.randrange(1, 4)), self.valDomainBoat[0] ),
                     min( (curry + currConflict * random.randrange(1, 4)), self.valDomainBoat[1] ) )
-                state[var] = (currx, curry, self.boatRadius)
+                state[var] = (currx, curry, self.boatRadius, 0)
             
-            #measure conflict
+            # measure conflict
             currConflict = self.getTotalOverLap(state, var)
             if(currConflict < minconflict):
                 minx = currx
                 miny = curry
                 minconflict = currConflict
+                localMinCount = 0
             if (currConflict == 0):
                 break
          
-        #print minconflict
+        if (minconflict == origconflict):
+            localMinCount = currentVar[3] + 1
         
         # set to minimum state
-        state[var] = (minx, miny, currentVar[2])
+        state[var] = (minx, miny, currentVar[2], localMinCount)
         
         return state
         
@@ -145,6 +160,7 @@ parser.add_argument("-o", type=int, default=2, help="radius of uavs")
 parser.add_argument("-l", type=int, default=2, help="number of boats")
 parser.add_argument("-k", type=int, default=1, help="radius of boats")
 parser.add_argument("-t", type=int, default=10000, help="number of iterations")
+parser.add_argument("-u", type=int, default=30, help="number of test cases for each iteration")
 parser.add_argument("-s", type=int, default=None, help="seed")
 args = parser.parse_args()
 
@@ -153,7 +169,7 @@ if args.p == "AreaCoverage":
         args.s = random.randint(0, sys.maxsize)
         print "seed = " + str(args.s)
     random.seed(args.s)
-    prob = [AreaCoverage(args.n, args.m , args.o, args.l, args.k)]
+    prob = [AreaCoverage(args.n, args.m , args.o, args.l, args.k, args.u)]
     print 'AreaCoverage: n =', args.n
 
 #state = prob.getStartState()
