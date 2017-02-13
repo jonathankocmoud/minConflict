@@ -6,7 +6,7 @@ import os   # for detecting *nix
 import math
 
 """ Source: https://github.com/kushjain/Min-Conflicts
-    This file includes problem definitons"""
+    This file includes problem definitions"""
 
 
 ##########################################################
@@ -39,8 +39,8 @@ class AreaCoverage:
             self.ObjList[str(j)+'b']=(random.uniform(self.valDomainBoat[0], self.valDomainBoat[1]), random.uniform(self.valDomainBoat[0], self.valDomainBoat[1]), self.boatRadius,0)
         return self.ObjList
 
-
-    def isConflicting(self, state, var):  #returns true if the var overlaps another objects, otheriwse returns false
+    #returns true if the var overlaps another objects, otherwise returns false
+    def isConflicting(self, state, var):
         currObj=state[var]
         for k, v in state.items():
             if(k==var):
@@ -61,7 +61,7 @@ class AreaCoverage:
     # randomly picks any UAV/boat which is still overlapping. Returns -1 if none of the objects are overlapping 
     def getVar(self, state):     
         varPool = sample(self.ObjList.keys(), len(self.ObjList))
-            # Iterate over the pool and return the first conflicted state
+        # Iterate over the pool and return the first conflicted state
         while varPool:
             var = varPool.pop()
             if self.isConflicting(state, var):
@@ -76,7 +76,7 @@ class AreaCoverage:
         
         # if caught in local minimum, jump somewhere else
         if (localMinCount > 2):
-            print "jump"
+            # print "jump"
             if(var[1:]=='u'):
                 state[var] = (random.uniform(self.valDomainUAV[0], self.valDomainUAV[1]), random.uniform(self.valDomainUAV[0], self.valDomainUAV[1]),self.UAVRadius,0)
             else:    
